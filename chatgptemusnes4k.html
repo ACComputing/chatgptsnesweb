@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cat's SNES EMU V1</title>
+<style>
+body { margin:0; background:#000; color:#0ff; font-family:monospace; }
+#top { padding:10px; border-bottom:2px solid #0ff; }
+canvas { border:2px solid #0ff; image-rendering:pixelated; display:block; margin:10px; }
+</style>
+</head>
+
+<body>
+
+<div id="top">
+🧠 Cat's SNES EMU V1 — TILE ENGINE BUILD 😼
+</div>
+
+<canvas id="screen" width="256" height="224"></canvas>
+<p id="log">booting tile engine...</p>
+
+<script>
+
+// =============================
+// 🧠 MEMORY
+// =============================
+const VRAM = new Uint8Array(256 * 224);
+
+// 16x16 tile map (SNES style idea)
+const MAP_W = 16;
+const MAP_H = 14;
+const tileMap = new Uint8Array(MAP_W * MAP_H);
+
+// fill tile map with patterns
+for (let i = 0; i < tileMap.length; i++) {
+  tileMap[i] = i % 16;
+}
+
+// =============================
+// 🎨 TILE SET (fake SNES tiles)
+// =============================
+const TILE_SIZE = 8;
+
+// generate procedural tiles
+function tileColor(id, x, y) {
+  return (id * 16 + x * 8 + y * 4) & 255;
+}
+
+// =============================
+// 🧠 CPU (still minimal core)
+// =============================
+const CPU = { tick: 0 };
+
+function stepCPU() {
+  CPU.tick++;
+
+  // slowly mutate tiles (like a game would)
+  const i = CPU.tick % tileMap.length;
+  tileMap[i] = (tileMap[i] + 1) % 32;
+}
+
+// =============================
+// 🎮 RENDER TILE ENGINE
+// =============================
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+const img = ctx.createImageData(256, 224);
+
+function render() {
+
+  for (let ty = 0; ty < MAP_H; ty++) {
+    for (let tx = 0; tx < MAP_W; tx++) {
+
+      const tileId = tileMap[ty * MAP_W + tx];
+
+      for (let y = 0; y < TILE_SIZE; y++) {
+        for (let x = 0; x < TILE_SIZE; x++) {
+
+          const px = tx * TILE_SIZE + x;
+          const py = ty * TILE_SIZE + y;
+
+          const idx = (py * 256 + px);
+
+          const v = tileColor(tileId, x, y);
+
+          img.data[idx*4+0] = v;
+          img.data[idx*4+1] = v;
+          img.data[idx*4+2] = v;
+          img.data[idx*4+3] = 255;
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+}
+
+// =============================
+// 🔁 LOOP
+// =============================
+function loop() {
+  for (let i = 0; i < 50; i++) stepCPU();
+  render();
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+document.getElementById("log").innerText =
+  "Cat's SNES EMU V1 running (tile engine active) 😼";
+
+</script>
+
+</body>
+</html>
