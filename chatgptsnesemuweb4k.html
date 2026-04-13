@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cat's SNES EMU V0</title>
+<style>
+body {
+  margin: 0;
+  background: #000;
+  color: #00ffcc;
+  font-family: monospace;
+}
+
+#top {
+  padding: 10px;
+  border-bottom: 2px solid #00ffcc;
+}
+
+#title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+#stamp {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid #00ffcc;
+  margin-left: 10px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+canvas {
+  border: 2px solid #00ffcc;
+  image-rendering: pixelated;
+  display: block;
+  margin: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="top">
+<span id="title">🧠 Cat's SNES EMU V0</span>
+<span id="stamp">STAMPED ✔ CatGPT BUILD</span>
+</div>
+
+<canvas id="screen" width="256" height="224"></canvas>
+<p id="log">booting Cat’s CPU...</p>
+
+<script>
+
+// =========================
+// 🧠 MEMORY SYSTEM
+// =========================
+const RAM = new Uint8Array(0x2000);
+const VRAM = new Uint8Array(256 * 224);
+const ROM  = new Uint8Array(0x8000);
+
+// fake ROM data (placeholder program)
+for (let i = 0; i < ROM.length; i++) {
+  ROM[i] = (i * 7 + 3) & 255;
+}
+
+// =========================
+// 🧠 CPU CORE (SNES-like)
+// =========================
+const CPU = {
+  A: 0,
+  X: 0,
+  PC: 0,
+  cycles: 0
+};
+
+// =========================
+// 🧠 BUS (real emulator pattern)
+// =========================
+function read(addr) {
+  addr &= 0xFFFF;
+
+  if (addr < 0x2000) return RAM[addr];
+  if (addr < 0xA000) return VRAM[addr - 0x2000];
+  return ROM[addr % ROM.length];
+}
+
+function write(addr, val) {
+  addr &= 0xFFFF;
+
+  if (addr < 0x2000) RAM[addr] = val;
+  else if (addr < 0xA000) VRAM[addr - 0x2000] = val;
+}
+
+// =========================
+// 🧠 CPU STEP
+// =========================
+function stepCPU() {
+
+  const op = read(CPU.PC++);
+
+  switch (op & 0xF0) {
+
+    case 0x10:
+      CPU.A = read(CPU.PC++);
+      break;
+
+    case 0x20:
+      CPU.A = (CPU.A + read(CPU.PC++)) & 255;
+      break;
+
+    case 0x30:
+      write(0x2000 + (CPU.X++ % VRAM.length), CPU.A);
+      break;
+
+    case 0x40:
+      CPU.PC = read(CPU.PC++);
+      break;
+
+    default:
+      break;
+  }
+
+  CPU.cycles++;
+}
+
+// =========================
+// 🎮 RENDER ENGINE
+// =========================
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+const img = ctx.createImageData(256,224);
+
+function render() {
+
+  for (let i = 0; i < VRAM.length; i++) {
+    const v = VRAM[i];
+
+    img.data[i*4+0] = v;
+    img.data[i*4+1] = v;
+    img.data[i*4+2] = v;
+    img.data[i*4+3] = 255;
+  }
+
+  ctx.putImageData(img, 0, 0);
+}
+
+// =========================
+// 🔁 EMULATOR LOOP
+// =========================
+function frame() {
+
+  for (let i = 0; i < 500; i++) {
+    stepCPU();
+  }
+
+  render();
+
+  requestAnimationFrame(frame);
+}
+
+frame();
+
+document.getElementById("log").innerText =
+  "Cat's SNES EMU V0 running ✔";
+
+</script>
+
+</body>
+</html>
